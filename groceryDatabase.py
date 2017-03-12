@@ -2,8 +2,10 @@
 #groceryDatabase.py: Data base for purchased grocerys
 #
 
+import os
 import time
 import datetime
+import configparser
 
 class attribute:
     """ 
@@ -148,24 +150,42 @@ class groceryDatabase:
     Object maintaining a list of entry instances.
     """
 
-    def __init__(self, path, load=False):
-        self.path = path
-        self.database = []
-        if load:
+    def __init__(self):
+        self._dir = os.path.dirname(os.path.abspath(__file__))
+        self._config_path = self._dir + "/.groceryDatabase.conf"
+        self._path = ""
+        self._database = []
+
+        config = configparser.ConfigParser()
+        config.read(self._config_path)
+        
+        try:
+            self._load_from_config(config)
+        except KeyError:
+            print("WARNING: Broken or missing configfile \"" + self._config_path + "\". Initalizing new config file.")
+            self._broken_config_file()
+            
+            config.read(self._config_path)
+            self._load_from_config(config)
+
+        try:
             self.load()
+        except FileNotFoundError:
+            print("WARNING: No database found at \"" + self._path + "\". Initalizing new database file.")
+            self.update()
         
     def __str__(self):
-        return "\n".join([str(entry) for entry in self.database])
+        return "\n".join([str(entry) for entry in self._database])
 
     def __repr__(self):
-        return "\n".join([repr(entry) for entry in self.database])
-        
+        return "\n".join([repr(entry) for entry in self._database])
+
     def update(self):
         """ 
         Save database to file
         """
     
-        with open(self.path, "w") as fout:
+        with open(self._path, "w") as fout:
             fout.write(repr(self))
     
     def load(self):
@@ -173,10 +193,10 @@ class groceryDatabase:
         Load database from file
         """
         
-        self.database = []
+        self._database = []
         
         text = ""
-        with open(self.path, "r") as fin:
+        with open(self._path, "r") as fin:
             text = fin.read()
         
         lines = text.split("\n")
@@ -201,7 +221,7 @@ class groceryDatabase:
             Add entry to data base
         """
         
-        self.database = self.database + [entry]
+        self._database = self._database + [entry]
 
     def _find_block(self, lines, offset=0):
         """ 
@@ -242,3 +262,21 @@ class groceryDatabase:
             raise IOError("No closing tag found for database entry.")
         else:
             raise EOFError("No database entry found.")
+
+    def _load_from_config(self, config):
+        """ 
+        Load setting from config file.
+        """
+        
+        self._path = config["main"]["database_path"]
+        
+    def _broken_config_file(self):
+        """ 
+        Overwrite broken or missing config file.        
+        """
+        
+        config = configparser.ConfigParser()
+        config["main"] = {}
+        config["main"]["database_path"] = self._dir + "/database_grocery.db"
+        with open(self._config_path, "w") as fout:
+            config.write(fout)

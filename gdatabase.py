@@ -8,19 +8,13 @@ import cmd
 import sys
 import groceryDatabase
 
-DATABASE_FILE = "./database_grocery.db"
-
 class gdatabaseShell(cmd.Cmd):
     intro = "Welcome to the gdatabase shell"
     prompt = ">>> "
 
     def __init__(self, completekey='tab', stdin=None, stdout=None):
         super().__init__(completekey, stdin, stdout)
-        try:
-            self.database = groceryDatabase.groceryDatabase(DATABASE_FILE, True)
-        except FileNotFoundError:
-            print("WARNING: No database found at \"" + DATABASE_FILE + "\". Initalizing new database file.")
-            self.database = groceryDatabase.groceryDatabase(DATABASE_FILE)
+        self.database = groceryDatabase.groceryDatabase()
     
     def do_list(self, arg):
         """ 
@@ -33,11 +27,11 @@ class gdatabaseShell(cmd.Cmd):
         Add entry to database.
         
         Examples: 
-            add name tag,...,tag; trait,value,unit ...
+            add name: tag,...,tag; trait,value,unit ...
     
             add name; trait,value trait,value,unit ...
         
-            add name tag,...,tag
+            add name: tag,...,tag
         
             add name
 
@@ -61,7 +55,7 @@ class gdatabaseShell(cmd.Cmd):
                 print("Malformed command 1")
                 return
 
-            name_tags = name_tags.split(" ", 1)
+            name_tags = name_tags.split(":")
             if len(name_tags) == 1:
                 name = name_tags[0]
                 tags = None
