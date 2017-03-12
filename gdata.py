@@ -28,14 +28,17 @@ class gdatabaseUtility:
         """
         self.database = groceryDatabase.groceryDatabase()
         
+        function = None
+
         try:
             if command not in _commands:
                 raise AttributeError
             
             function = getattr(self, command)
-            function(arg)
         except AttributeError:
             print("ERROR: \"" + command + "\" is not a valid subcommand. See 'gdata help'")
+ 
+        function(arg)
             
     @command
     def list(self, arg):
@@ -43,7 +46,7 @@ class gdatabaseUtility:
         List the contents of the database.
         """
         print(self.database)
-    
+
     @command
     def add(self, arg):
         """ 
@@ -89,11 +92,11 @@ class gdatabaseUtility:
                 for i, attribute in enumerate(attributes):
                     attribute = [trait.strip() for trait in attribute.split(",") if len(trait.strip()) != 0]
                     if len(attribute) == 2:
-                        attributes[i] = (attribute[0], float(attribute[1]), None)
+                        attributes[i] = (attribute[0], self._float_eval(attribute[1]), None)
                     elif len(attribute) == 3:
                         if len(attribute[2].strip()) == 0:
                             attribute[2] = None
-                        attributes[i] = (attribute[0], float(attribute[1]), attribute[2])
+                        attributes[i] = (attribute[0], self._float_eval(attribute[1]), attribute[2])
                     else:
                         print("Malformed command 3")
                         return
@@ -116,15 +119,83 @@ class gdatabaseUtility:
                 if len(attribute) == 0:
                     break
                 elif len(attribute) == 2:
-                    attributes.append((attribute[0], float(attribute[1]), None))
+                    attributes.append((attribute[0], self._float_eval(attribute[1]), None))
                 elif len(attribute) == 3:
                     if len(attribute[2].strip()) == 0:
                         attribute[2] = None
-                    attributes.append((attribute[0], float(attribute[1]), attribute[2]))
+                    attributes.append((attribute[0], self._float_eval(attribute[1]), attribute[2]))
                 else:
                     print("Malformed command 4")
                     return
         
+        new_entry = groceryDatabase.entry(name, tags)
+        for name, value, unit in attributes:
+            new_attribute = groceryDatabase.attribute(name, value, unit)
+            new_entry.add_attribute(new_attribute)
+        
+        self.database.add_entry(new_entry)
+        self.database.update()
+    
+    @command
+    def add_food(self, arg):
+        """ 
+        Add a food entry to database.
+        
+        Examples: 
+            add name, tag,...,tag
+            add name
+            add
+        """
+
+        name = None
+        tags = None
+        attributes = []
+
+        if len(arg.strip()) != 0:
+            arg = arg.split(",", 1)
+            if len(arg) == 1:
+                name = arg[0]
+                tags = None
+            else:
+                name = arg[0]
+                tags = [tag.strip() for tag in arg[1].split(",") if len(tag.strip()) != 0]
+                if len(tags) == 0:
+                    tags = None
+            
+        while name is None:
+            name = str(input("Enter entry name: ")).strip()
+            if len(name) == 0:
+                name = None
+        
+        if tags is None:
+            tags = str(input("Enter tags(comma separated): ")).strip()
+            tags = [tag.strip() for tag in tags.split(",") if len(tag.strip()) != 0]
+        
+        
+        attributes.append(("price", self._float_eval(input("Enter price: ")), "dollars"))
+        
+        while True:
+            reply = str(input("Did you buy more than one[y/n]: ")).lower()
+            if reply.startswith("y"):
+                attributes.append(("quantity", self._float_eval(input("Enter quantity: ")), None))
+                break
+            elif reply.startswith("n"):
+                break
+
+        while True:
+            reply = str(input("Mesure by mass or volume[m/v]: ")).lower()
+            if reply.startswith("m"):
+                attributes.append(("mass", self._float_eval(input("Enter mass in grams: ")), "g"))
+                break
+            elif reply.startswith("v"):
+                attributes.append(("volume", self._float_eval(input("Enter volume in milliliters: ")), "ml"))
+                break
+        
+        attributes.append(("calories", self._float_eval(input("Enter calories in calories per 100 grams: ")), "calories/100g"))
+        attributes.append(("fat", self._float_eval(input("Enter fat in grams per 100 grams: ")), "g/100g"))
+        attributes.append(("carbohydrates", self._float_eval(input("Enter carbohydrates in grams per 100 grams: ")), "g/100g"))
+        attributes.append(("protein", self._float_eval(input("Enter protein in grams per 100 grams: ")), "g/100g"))
+    
         new_entry = groceryDatabase.entry(name, tags)
         for name, value, unit in attributes:
             new_attribute = groceryDatabase.attribute(name, value, unit)
@@ -148,6 +219,15 @@ class gdatabaseUtility:
                     print("No documentation exists for the subcommand \"" + arg.strip() + "\".")
             else:
                 print("\"" + arg.strip() + "\" is not a valid subcommand.")
+    
+    def _float_eval(self, string):
+        """ 
+        evaluate a string as a float.
+        
+        Note this code uses eval
+        """
+        string = "".join([char for char in string if char in '0123456789.*/( )'])
+        return float(eval(string, {"__builtins__": None}))
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
