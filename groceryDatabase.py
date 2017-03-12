@@ -153,7 +153,12 @@ class groceryDatabase:
     def __init__(self):
         self._dir = os.path.dirname(os.path.abspath(__file__))
         self._config_path = self._dir + "/.groceryDatabase.conf"
+
         self._path = ""
+        self._backup_dir = ""
+        self._backup_interval = 0
+
+        self._timestamp = 0
         self._database = []
 
         config = configparser.ConfigParser()
@@ -172,7 +177,7 @@ class groceryDatabase:
             self.load()
         except FileNotFoundError:
             print("WARNING: No database found at \"" + self._path + "\". Initalizing new database file.")
-            self.update()
+            self.update(backup=False)
         
     def __str__(self):
         return "\n".join([str(entry) for entry in self._database])
@@ -180,13 +185,27 @@ class groceryDatabase:
     def __repr__(self):
         return "\n".join([repr(entry) for entry in self._database])
 
-    def update(self):
+    def update(self, backup=True):
         """ 
         Save database to file
         """
-    
+        
+        self._timestamp = int(time.time())
+
+        if backup:
+            old_database = groceryDatabase()
+            if abs(self._timestamp - old_database._timestamp) > self._backup_interval:
+                backup_dir = os.path.dirname(self._path) + self._backup_dir
+                if not os.path.exists(backup_dir):
+                    os.makedirs(backup_dir)
+            
+                os.rename(self._path, backup_dir + "/" + os.path.basename(self._path) + ".back")
+
+        if not os.path.exists(os.path.dirname(self._path)):
+            os.makedirs(os.path.dirname(self._path))
+
         with open(self._path, "w") as fout:
-            fout.write(repr(self))
+            fout.write(str(self._timestamp) + "\n" +repr(self))
     
     def load(self):
         """ 
@@ -210,6 +229,13 @@ class groceryDatabase:
                 self.add_entry(new_entry)
             except EOFError:
                 break
+
+        try:
+            if len(lines) != 0:
+                self._timestamp = int(lines[0])
+        except ValueError:
+            print("Warning: No database time stamp found.")
+            self._timestamp = 1
     
     def add_entry(self, entry):
         """ 
@@ -269,6 +295,8 @@ class groceryDatabase:
         """
         
         self._path = config["main"]["database_path"]
+        self._backup_dir = config["main"]["backup_dir"]
+        self._backup_interval = int(config["main"]["backup_interval"])
         
     def _broken_config_file(self):
         """ 
@@ -278,5 +306,7 @@ class groceryDatabase:
         config = configparser.ConfigParser()
         config["main"] = {}
         config["main"]["database_path"] = self._dir + "/database_grocery.db"
+        config["main"]["backup_dir"] = "/backups"
+        config["main"]["backup_interval"] = "86400"
         with open(self._config_path, "w") as fout:
             config.write(fout)

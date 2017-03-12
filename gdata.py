@@ -4,37 +4,56 @@
 # comandline interface for groceryDatabase.py
 #
 
-import cmd
 import sys
+import textwrap
 import groceryDatabase
 
-class gdatabaseShell(cmd.Cmd):
-    intro = "Welcome to the gdatabase shell"
-    prompt = ">>> "
+_commands = {}
 
-    def __init__(self, completekey='tab', stdin=None, stdout=None):
-        super().__init__(completekey, stdin, stdout)
-        self.database = groceryDatabase.groceryDatabase()
-    
-    def do_list(self, arg):
+def command(function):
+    _commands[function.__name__] = function.__doc__
+    return function
+
+class gdatabaseUtility:
+    def __init__(self, command, arg=""):
         """ 
-        List contents of database.
+        Initalize gdatabasUtility
+        
+        Parameters
+        ----------
+        command : string
+            The subcommand to run.
+        arg : string
+            Arguments for the command.
+        """
+        self.database = groceryDatabase.groceryDatabase()
+        
+        try:
+            if command not in _commands:
+                raise AttributeError
+            
+            function = getattr(self, command)
+            function(arg)
+        except AttributeError:
+            print("ERROR: \"" + command + "\" is not a valid subcommand. See 'gdata help'")
+            
+    @command
+    def list(self, arg):
+        """ 
+        List the contents of the database.
         """
         print(self.database)
     
-    def do_add(self, arg):
+    @command
+    def add(self, arg):
         """ 
-        Add entry to database.
+        Add an entry to database.
         
         Examples: 
-            add name: tag,...,tag; trait,value,unit ...
-    
-            add name; trait,value trait,value,unit ...
-        
-            add name: tag,...,tag
-        
+            add name, tag,...,tag: trait,value,unit ...
+            add name: trait,value trait,value,unit ...
+            add name, tag,...,tag
             add name
-
             add
         """
 
@@ -43,7 +62,7 @@ class gdatabaseShell(cmd.Cmd):
         attributes = None
 
         if len(arg.strip()) != 0:
-            arg = arg.split(";")
+            arg = arg.split(":")
             if len(arg) == 1:
                 name_tags, attributes = arg[0], None
             elif len(arg) == 2:
@@ -55,7 +74,7 @@ class gdatabaseShell(cmd.Cmd):
                 print("Malformed command 1")
                 return
 
-            name_tags = name_tags.split(":")
+            name_tags = name_tags.split(",", 1)
             if len(name_tags) == 1:
                 name = name_tags[0]
                 tags = None
@@ -112,45 +131,26 @@ class gdatabaseShell(cmd.Cmd):
             new_entry.add_attribute(new_attribute)
         
         self.database.add_entry(new_entry)
-
-    def do_EOF(self, arg):
-        """ 
-        Exit gdatabase comand line.
-        """
-        
-        print("\n")
-        return self._exit_cmd()
-        
-    def do_exit(self, arg):
-        """ 
-        Exit gdatabase comand line.
-        """
-        
-        return self._exit_cmd()
-        
-    def emptyline(self):
-        """ 
-        This method is called if an empty line is given
-        in responce to the command prompt.
-        """
-        
-        return
-    
-    def default(self, line):
-        print("*** ERROR: \"" + line + "\" command not found")
-    
-    def _exit_cmd(self):
-        """ 
-        cleanly close cmd.
-        """
-        
         self.database.update()
-        return True
+    
+    @command
+    def help(self, arg):
+        """ 
+        Display helpfull information about the avaliable subcommands.
+        """
+        if arg.strip() == "":
+            print("Help: all subcommands\n" + " ".join(list(_commands.keys())) + "\n\n'gdata help' lists available subcommands. See 'gdata help <command>' to get documentation for a specific subcommand.")
+        else:
+            if arg.strip() in _commands:
+                if _commands[arg.strip()] is not None:
+                    print(textwrap.dedent(_commands[arg.strip()]))
+                else:
+                    print("No documentation exists for the subcommand \"" + arg.strip() + "\".")
+            else:
+                print("\"" + arg.strip() + "\" is not a valid subcommand.")
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        terminal = gdatabaseShell()
-        terminal.onecmd(" ".join(sys.argv[1:]))
+        process = gdatabaseUtility(sys.argv[1], " ".join(sys.argv[2:]))
     else:
-        terminal = gdatabaseShell()
-        terminal.cmdloop()
+        process = gdatabaseUtility("help")
