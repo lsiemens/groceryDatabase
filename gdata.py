@@ -7,6 +7,7 @@
 import sys
 import textwrap
 import groceryDatabase
+#import terminal
 
 _commands = {}
 
@@ -38,7 +39,11 @@ class gdatabaseUtility:
         except AttributeError:
             print("ERROR: \"" + command + "\" is not a valid subcommand. See 'gdata help'")
  
-        function(arg)
+        try:
+            function(arg)
+        except KeyboardInterrupt:
+            #close program silently
+            print("\n")
             
     @command
     def list(self, arg):

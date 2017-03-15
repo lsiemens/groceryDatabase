@@ -28,7 +28,7 @@ class attribute:
         self.unit = unit
     
     def __str__(self):
-        text = self.name + ": " + str(self.value)
+        text = self.name + ": " + "{:.2f}".format(self.value)
         if self.unit is not None:
             text = text + " " + str(self.unit)
         return text + "\n"
