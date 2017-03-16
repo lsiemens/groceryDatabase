@@ -28,9 +28,9 @@ class terminal:
         self.stdscr.addstr("\n")
         self.stdscr.refresh()
 
-    def echo(self, text):
+    def print(self, text):
         """ 
-        Echo input to terminal
+        Print input to terminal
         """
         self.stdscr.addstr(text)
         self.stdscr.refresh()
@@ -50,7 +50,7 @@ class terminal:
         ----------
         prompt : sting
             The prompt to display
-        tabcomplete : function
+        tabcomplete : function(string)
             The callback for tab completion. If None, then tab is ignored.
         """
         self.stdscr.addstr(prompt)
@@ -75,7 +75,22 @@ class terminal:
                     index += 1
                 elif key == "\t":
                     if tabcomplete is not None:
-                        tabcomplete()
+                        text, tips = tabcomplete(string)
+                        y, x = self.stdscr.getyx()
+                        self.stdscr.move(y + 1, 0)
+                        self.stdscr.clrtobot()
+                        self.stdscr.move(y, x)
+                        
+                        if len(text) != 0:
+                            string = string[:index] + text + string[index:]
+                            y, x = self.stdscr.getyx()
+                            self.stdscr.addstr(y, x, string[index:])
+                            self.stdscr.move(y, x + len(text))
+                            index = index + len(text)
+                        else:
+                            y, x = self.stdscr.getyx()
+                            self.stdscr.addstr(y + 1, 0, tips)
+                            self.stdscr.move(y, x)
                 else:
                     y, x = self.stdscr.getyx()
                     self.stdscr.move(y + 1, 0)
