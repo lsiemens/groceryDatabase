@@ -179,13 +179,12 @@ class gdatabaseUtility:
                 tags = str(term.input("Enter tags(comma separated): ", self._tabcomplete_tag(name))).strip()
                 tags = [tag.strip() for tag in tags.split(",") if len(tag.strip()) != 0]
             
-            
-            attributes.append(("price", self._float_eval(term.input("Enter price: ")), "dollars"))
+            attributes.append(("price", self._float_eval(term.input("Enter price: ", self._tabcomplete_attribute(name, tags, "price"))), "dollars"))
             
             while True:
                 reply = str(term.input("Did you buy more than one[y/n]: ")).lower()
                 if reply.startswith("y"):
-                    attributes.append(("quantity", self._float_eval(term.input("Enter quantity: ")), None))
+                    attributes.append(("quantity", self._float_eval(term.input("Enter quantity: ", self._tabcomplete_attribute(name, tags, "quantity"))), None))
                     break
                 elif reply.startswith("n"):
                     break
@@ -193,16 +192,16 @@ class gdatabaseUtility:
             while True:
                 reply = str(term.input("Mesure by mass or volume[m/v]: ")).lower()
                 if reply.startswith("m"):
-                    attributes.append(("mass", self._float_eval(term.input("Enter mass in grams: ")), "g"))
+                    attributes.append(("mass", self._float_eval(term.input("Enter mass in grams: ", self._tabcomplete_attribute(name, tags, "mass"))), "g"))
                     break
                 elif reply.startswith("v"):
-                    attributes.append(("volume", self._float_eval(term.input("Enter volume in milliliters: ")), "ml"))
+                    attributes.append(("volume", self._float_eval(term.input("Enter volume in milliliters: ", self._tabcomplete_attribute(name, tags, "volume"))), "ml"))
                     break
-            
-            attributes.append(("calories", self._float_eval(term.input("Enter calories in calories per 100 grams: ")), "calories/100g"))
-            attributes.append(("fat", self._float_eval(term.input("Enter fat in grams per 100 grams: ")), "g/100g"))
-            attributes.append(("carbohydrates", self._float_eval(term.input("Enter carbohydrates in grams per 100 grams: ")), "g/100g"))
-            attributes.append(("protein", self._float_eval(term.input("Enter protein in grams per 100 grams: ")), "g/100g"))
+
+            attributes.append(("calories", self._float_eval(term.input("Enter calories in calories per 100 grams: ", self._tabcomplete_attribute(name, tags, "calories"))), "calories/100g"))
+            attributes.append(("fat", self._float_eval(term.input("Enter fat in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "fat"))), "g/100g"))
+            attributes.append(("carbohydrates", self._float_eval(term.input("Enter carbohydrates in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "carbohydrates"))), "g/100g"))
+            attributes.append(("protein", self._float_eval(term.input("Enter protein in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "protein"))), "g/100g"))
         
         new_entry = groceryDatabase.entry(name, tags)
         for name, value, unit in attributes:
@@ -258,7 +257,6 @@ class gdatabaseUtility:
             return text, tips
         return tabcomplete
     
-
     def _tabcomplete_tag(self, name):
         """ 
         returns callback function for tab completion 
@@ -270,7 +268,7 @@ class gdatabaseUtility:
             tags = []
             for entry in self.database._database:
                 if entry.name == name:
-                    for tag in entry.tags:
+                    for tag in entry._tags:
                         if tag.startswith(string):
                             tags.append(tag)            
             tags = list(set(tags))
@@ -291,6 +289,40 @@ class gdatabaseUtility:
                         tips = tips + ", "
     
                 tips = tips + tags[-1]
+            return text, tips
+        return tabcomplete
+    
+    def _tabcomplete_attribute(self, name, tags, attribute):
+        """ 
+        returns callback function for tab completion 
+        """
+        def tabcomplete(string):
+            values = []
+            for entry in self.database._database:
+                if entry.name == name:
+                    if set(entry._tags) == set(tags):
+                        for trait in entry.attributes:
+                            if trait.name == attribute:
+                                if str(trait.value).startswith(string):
+                                    values.append("{:.2f}".format(trait.value))
+            values = list(set(values))
+    
+            prefix = os.path.commonprefix(values)
+            
+            text = ""
+            if len(prefix) != 0:
+                text = prefix[len(string):]
+            
+            tips = ""
+            if len(values) > 1:
+                for i, value in enumerate(values[:-1]):
+                    tips = tips + value
+                    if (i + 1)%3 == 0:
+                        tips = tips + "\n"
+                    else:
+                        tips = tips + ", "
+    
+                tips = tips + values[-1]
             return text, tips
         return tabcomplete
     
