@@ -18,9 +18,8 @@ def command(function):
 
 class gdatabaseUtility:
     def __init__(self, command, arg=""):
-        """ 
-        Initalize gdatabasUtility
-        
+        """Initalize gdatabasUtility
+
         Parameters
         ----------
         command : string
@@ -29,36 +28,34 @@ class gdatabaseUtility:
             Arguments for the command.
         """
         self.database = groceryDatabase.groceryDatabase()
-        
+
         function = None
 
         try:
             if command not in _commands:
                 raise AttributeError
-            
+
             function = getattr(self, command)
         except AttributeError:
             print("ERROR: \"" + command + "\" is not a valid subcommand. See 'gdata help'")
- 
+
         try:
             function(arg)
         except KeyboardInterrupt:
             #close program silently
             print("\n")
-            
+
     @command
     def list(self, arg):
-        """ 
-        List the contents of the database.
+        """List the contents of the database.
         """
         print(self.database)
 
     @command
-    def add(self, arg):
-        """ 
-        Add an entry to database.
-        
-        Examples: 
+    def add_custom(self, arg):
+        """Add a custom entry to database.
+
+        Examples:
             add name, tag,...,tag: trait,value,unit ...
             add name: trait,value trait,value,unit ...
             add name, tag,...,tag
@@ -92,7 +89,7 @@ class gdatabaseUtility:
                 tags = [tag.strip() for tag in name_tags[1].split(",") if len(tag.strip()) != 0]
                 if len(tags) == 0:
                     tags = None
-            
+
             if attributes is not None:
                 attributes = attributes.split(" ")
                 for i, attribute in enumerate(attributes):
@@ -112,17 +109,17 @@ class gdatabaseUtility:
                 name = str(term.input("Enter entry name: ", self._tabcomplete_name())).strip()
                 if len(name) == 0:
                     name = None
-            
+
             if tags is None:
                 tags = str(term.input("Enter tags(comma separated): ", self._tabcomplete_tag(name))).strip()
                 tags = [tag.strip() for tag in tags.split(",") if len(tag.strip()) != 0]
-            
+
             if attributes is None:
                 attributes = []
                 while True:
                     attribute = str(term.input("Enter attribute, leave blank if finished. format 'Name,value,[unit]'\nattribute: "))
                     attribute = [trait.strip() for trait in attribute.split(",") if len(trait.strip()) != 0]
-    
+
                     if len(attribute) == 0:
                         break
                     elif len(attribute) == 2:
@@ -134,21 +131,20 @@ class gdatabaseUtility:
                     else:
                         term.print("Malformed command 4")
                         return
-        
+
         new_entry = groceryDatabase.entry(name, tags)
         for name, value, unit in attributes:
             new_attribute = groceryDatabase.attribute(name, value, unit)
             new_entry.add_attribute(new_attribute)
-        
+
         self.database.add_entry(new_entry)
         self.database.update()
-    
+
     @command
-    def add_food(self, arg):
-        """ 
-        Add a food entry to database.
-        
-        Examples: 
+    def add(self, arg):
+        """Add a food entry to database.
+
+        Examples:
             add name, tag,...,tag
             add name
             add
@@ -168,19 +164,19 @@ class gdatabaseUtility:
                 tags = [tag.strip() for tag in arg[1].split(",") if len(tag.strip()) != 0]
                 if len(tags) == 0:
                     tags = None
-            
+
         with terminal.terminal() as term:
             while name is None:
                 name = str(term.input("Enter entry name: ", self._tabcomplete_name())).strip()
                 if len(name) == 0:
                     name = None
-            
+
             if tags is None:
                 tags = str(term.input("Enter tags(comma separated): ", self._tabcomplete_tag(name))).strip()
                 tags = [tag.strip() for tag in tags.split(",") if len(tag.strip()) != 0]
-            
+
             attributes.append(("price", self._float_eval(term.input("Enter price: ", self._tabcomplete_attribute(name, tags, "price"))), "dollars"))
-            
+
             while True:
                 reply = str(term.input("Did you buy more than one[y/n]: ")).lower()
                 if reply.startswith("y"):
@@ -188,7 +184,7 @@ class gdatabaseUtility:
                     break
                 elif reply.startswith("n"):
                     break
-    
+
             while True:
                 reply = str(term.input("Mesure by mass or volume[m/v]: ")).lower()
                 if reply.startswith("m"):
@@ -197,24 +193,41 @@ class gdatabaseUtility:
                 elif reply.startswith("v"):
                     attributes.append(("volume", self._float_eval(term.input("Enter volume in milliliters: ", self._tabcomplete_attribute(name, tags, "volume"))), "ml"))
                     break
+                elif reply.strip() == "":
+                    # skip if empty
+                    break
 
-            attributes.append(("calories", self._float_eval(term.input("Enter calories in calories per 100 grams: ", self._tabcomplete_attribute(name, tags, "calories"))), "calories/100g"))
-            attributes.append(("fat", self._float_eval(term.input("Enter fat in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "fat"))), "g/100g"))
-            attributes.append(("carbohydrates", self._float_eval(term.input("Enter carbohydrates in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "carbohydrates"))), "g/100g"))
-            attributes.append(("protein", self._float_eval(term.input("Enter protein in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "protein"))), "g/100g"))
-        
+            try:
+                attributes.append(("calories", self._float_eval(term.input("Enter calories in calories per 100 grams: ", self._tabcomplete_attribute(name, tags, "calories"))), "calories/100g"))
+            except:
+                pass # skip if empty
+
+            try:
+                attributes.append(("fat", self._float_eval(term.input("Enter fat in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "fat"))), "g/100g"))
+            except:
+                pass
+
+            try:
+                attributes.append(("carbohydrates", self._float_eval(term.input("Enter carbohydrates in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "carbohydrates"))), "g/100g"))
+            except:
+                pass
+
+            try:
+                attributes.append(("protein", self._float_eval(term.input("Enter protein in grams per 100 grams: ", self._tabcomplete_attribute(name, tags, "protein"))), "g/100g"))
+            except:
+                pass
+
         new_entry = groceryDatabase.entry(name, tags)
         for name, value, unit in attributes:
             new_attribute = groceryDatabase.attribute(name, value, unit)
             new_entry.add_attribute(new_attribute)
-        
+
         self.database.add_entry(new_entry)
         self.database.update()
-    
+
     @command
     def help(self, arg):
-        """ 
-        Display helpfull information about the avaliable subcommands.
+        """Display helpfull information about the avaliable subcommands.
         """
         if arg.strip() == "":
             print("Help: all subcommands\n" + " ".join(list(_commands.keys())) + "\n\n'gdata help' lists available subcommands. See 'gdata help <command>' to get documentation for a specific subcommand.")
@@ -226,10 +239,9 @@ class gdatabaseUtility:
                     print("No documentation exists for the subcommand \"" + arg.strip() + "\".")
             else:
                 print("\"" + arg.strip() + "\" is not a valid subcommand.")
-    
+
     def _tabcomplete_name(self):
-        """ 
-        returns callback function for tab completion 
+        """returns callback function for tab completion
         """
         def tabcomplete(string):
             names = []
@@ -237,13 +249,13 @@ class gdatabaseUtility:
                 if entry.name.startswith(string):
                     names.append(entry.name)
             names = list(set(names))
-    
+
             prefix = os.path.commonprefix(names)
-            
+
             text = ""
             if len(prefix) != 0:
                 text = prefix[len(string):]
-            
+
             tips = ""
             if len(names) > 1:
                 for i, name in enumerate(names[:-1]):
@@ -252,33 +264,32 @@ class gdatabaseUtility:
                         tips = tips + "\n"
                     else:
                         tips = tips + ", "
-    
+
                 tips = tips + names[-1]
             return text, tips
         return tabcomplete
-    
+
     def _tabcomplete_tag(self, name):
-        """ 
-        returns callback function for tab completion 
+        """returns callback function for tab completion
         """
         def tabcomplete(string):
             if "," in string:
                 string = string.split(",")[-1].strip()
-            
+
             tags = []
             for entry in self.database._database:
                 if entry.name == name:
                     for tag in entry._tags:
                         if tag.startswith(string):
-                            tags.append(tag)            
+                            tags.append(tag)
             tags = list(set(tags))
-    
+
             prefix = os.path.commonprefix(tags)
-            
+
             text = ""
             if len(prefix) != 0:
                 text = prefix[len(string):]
-            
+
             tips = ""
             if len(tags) > 1:
                 for i, tag in enumerate(tags[:-1]):
@@ -287,14 +298,13 @@ class gdatabaseUtility:
                         tips = tips + "\n"
                     else:
                         tips = tips + ", "
-    
+
                 tips = tips + tags[-1]
             return text, tips
         return tabcomplete
-    
+
     def _tabcomplete_attribute(self, name, tags, attribute):
-        """ 
-        returns callback function for tab completion 
+        """returns callback function for tab completion
         """
         def tabcomplete(string):
             values = []
@@ -306,13 +316,13 @@ class gdatabaseUtility:
                                 if str(trait.value).startswith(string):
                                     values.append("{:.2f}".format(trait.value))
             values = list(set(values))
-    
+
             prefix = os.path.commonprefix(values)
-            
+
             text = ""
             if len(prefix) != 0:
                 text = prefix[len(string):]
-            
+
             tips = ""
             if len(values) > 1:
                 for i, value in enumerate(values[:-1]):
@@ -321,15 +331,14 @@ class gdatabaseUtility:
                         tips = tips + "\n"
                     else:
                         tips = tips + ", "
-    
+
                 tips = tips + values[-1]
             return text, tips
         return tabcomplete
-    
+
     def _float_eval(self, string):
-        """ 
-        evaluate a string as a float.
-        
+        """evaluate a string as a float.
+
         Note this code uses eval
         """
         string = "".join([char for char in string if char in '0123456789.*/( )'])
